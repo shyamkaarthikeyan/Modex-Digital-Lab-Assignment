@@ -1,4 +1,4 @@
-# Modex Digital Lab - Ticket Booking System
+# **Modex Digital Lab** - Ticket Booking System
 **Backend Intern Assignment - 48 Hour Challenge**
 
 A production-ready ticket booking system that simulates core functionality of modern ticketing platforms with enterprise-grade concurrency handling and race condition prevention. Built with Node.js, Express.js, and PostgreSQL.
