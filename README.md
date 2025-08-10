@@ -9,6 +9,7 @@ A production-ready ticket booking system that simulates core functionality of mo
 - ✅ **Booking Expiry System** - Automatic 2-minute timeout with background cleanup
 - ✅ **Production Architecture** - Scalable design with comprehensive documentation
 - ✅ **Complete API Suite** - RESTful endpoints with Swagger documentation
+- ✅ **Unified Development** - Single command runs backend + frontend together
 
 ## 🔗 Repository
 **GitHub**: [https://github.com/shyamkaarthikeyan/Modex-Digital-Lab-Assignment](https://github.com/shyamkaarthikeyan/Modex-Digital-Lab-Assignment)
@@ -16,9 +17,10 @@ A production-ready ticket booking system that simulates core functionality of mo
 ## 🏗️ Tech Stack
 - **Backend**: Node.js, Express.js
 - **Database**: PostgreSQL with atomic transactions
+- **Frontend**: Vanilla JS, Modern CSS (served by Express)
 - **API Documentation**: Swagger/OpenAPI 3.0
 - **Testing**: Custom concurrency & expiry test suites
-- **Frontend**: Modern responsive UI (bonus)
+- **Architecture**: Unified server serving both API and UI
 
 ## 🚀 Quick Start
 
@@ -56,9 +58,21 @@ npm run populate
 4. **Start Development Server**
 ```bash
 npm run dev
-# Server runs on http://localhost:3000
-# API Documentation: http://localhost:3000/docs
+# 🚀 Server runs on http://localhost:3000
+# 🌐 Frontend UI: http://localhost:3000 (automatically served)
+# 📚 API Documentation: http://localhost:3000/docs
+# 🔧 Backend API: http://localhost:3000/api/*
 ```
+
+**✨ Single Command Setup**: The `npm run dev` command starts both backend API and frontend UI simultaneously. The Express server serves the static frontend files from the `/public` folder while providing the REST API endpoints.
+
+## 🎮 Quick Demo
+1. **Start Everything**: `npm run dev`
+2. **Open Browser**: http://localhost:3000  
+3. **View API Docs**: http://localhost:3000/docs
+4. **Test Bookings**: Use the web interface or API directly
+
+**That's it!** 🎉 Both frontend and backend are running from a single command.
 
 ## 📋 Functional Requirements Implementation
 
@@ -266,14 +280,21 @@ WHERE status = 'held' AND hold_expires_at < NOW();
 
 ## 🔧 Available Scripts
 ```bash
-npm run dev          # Development server with auto-reload
-npm run start        # Production server
-npm run migrate      # Initialize database schema  
-npm run populate     # Add sample bus trips
-npm run test:concurrency    # Race condition tests
-npm run test:expiry         # Booking expiry tests
-npm run cleanup:tests       # Remove test data
+npm run dev          # 🚀 Start unified development server (backend API + frontend UI)
+npm run start        # 🏭 Production server (backend + frontend)
+npm run migrate      # 🗄️ Initialize database schema  
+npm run populate     # 📊 Add sample bus trips
+npm run test:concurrency    # 🧪 Race condition tests
+npm run test:expiry         # ⏰ Booking expiry tests
+npm run cleanup:tests       # 🧹 Remove test data
 ```
+
+### 🌟 Unified Development Experience
+- **Single Command**: `npm run dev` starts everything you need
+- **Hot Reload**: Backend restarts automatically on code changes  
+- **Integrated UI**: Frontend served directly by Express server
+- **API Documentation**: Interactive Swagger UI included
+- **Database Ready**: PostgreSQL connection with automatic migration
 
 ## 📁 Project Structure
 ```
@@ -332,8 +353,10 @@ Modex-Digital-Lab-Assignment/
 - Transaction-based locking ⭐
 - Comprehensive test suite ⭐
 - Interactive API documentation ⭐
-- Modern responsive frontend ⭐
+- Unified frontend + backend server ⭐
+- Modern responsive web interface ⭐
 - Background job processing ⭐
+- Real-time seat availability ⭐
 
 ## 📞 Support & Contact
 - **Repository**: [GitHub](https://github.com/shyamkaarthikeyan/Modex-Digital-Lab-Assignment)
