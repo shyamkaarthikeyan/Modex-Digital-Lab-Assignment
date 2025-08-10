@@ -52,6 +52,10 @@ function setAuth({ token, role, username }) {
   if (username) localStorage.setItem('username', username);
   renderWhoAmI();
   updateSectionVisibility();
+  
+  // Load content after successful login
+  loadShows();
+  loadMyBookings();
 }
 
 function logout() {
@@ -77,21 +81,39 @@ function updateSectionVisibility() {
   const seatmapSection = document.getElementById('seatmap');
   const bookingSection = document.getElementById('booking');
   const adminSection = document.getElementById('admin');
+  const navAdmin = document.getElementById('nav-admin');
+  const logoutContainer = document.getElementById('logout-container');
   
+  // Show/hide sections based on login status
   if (loginSection) loginSection.style.display = loggedIn ? 'none' : 'block';
   if (showsSection) showsSection.style.display = loggedIn ? 'block' : 'none';
   if (seatmapSection) seatmapSection.style.display = loggedIn ? 'block' : 'none';
   if (bookingSection) bookingSection.style.display = loggedIn ? 'block' : 'none';
   if (adminSection) adminSection.style.display = (loggedIn && isAdmin) ? 'block' : 'none';
+  
+  // Show/hide admin nav link based on role
+  if (navAdmin) navAdmin.style.display = (loggedIn && isAdmin) ? 'inline' : 'none';
+  
+  // Show/hide logout button in trips section
+  if (logoutContainer) logoutContainer.style.display = loggedIn ? 'block' : 'none';
 }
 
 function renderWhoAmI() {
   const role = localStorage.getItem('role');
   const username = localStorage.getItem('username');
+  
   if (role && username) {
-    whoamiEl.innerHTML = `Signed in as ${username} (${role}) <button type="button" onclick="logout()" class="secondary" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;">Logout</button>`;
+    whoamiEl.innerHTML = `
+      <div style="text-align: center; color: var(--success); padding: 10px;">
+        <span style="font-weight: 500;">✅ Logged in as <strong>${username}</strong> (${role})</span>
+      </div>
+    `;
   } else {
-    whoamiEl.textContent = 'Not signed in';
+    whoamiEl.innerHTML = `
+      <div style="text-align: center; opacity: 0.7;">
+        <span>🔒 Please sign in using the buttons above to access the booking system</span>
+      </div>
+    `;
   }
 }
 
@@ -197,21 +219,47 @@ function renderSeatGrid(seats) {
 }
 
 async function bookSelected() {
-  if (!currentShowId || selectedSeats.size === 0) return;
-  const seatNumbers = Array.from(selectedSeats);
-  const { ok, data } = await api('/bookings', {
-    method: 'POST',
-    body: JSON.stringify({ showId: currentShowId, seatNumbers, mode: 'confirm' })
-  });
+  if (!currentShowId || selectedSeats.size === 0) {
+    showToast('Please select seats to book', 'error');
+    return;
+  }
   
-  if (ok && data?.booking?.id) {
-    bookingIdEl.value = data.booking.id;
-    showToast(`Booking ${data.booking.status}`, data.booking.status === 'CONFIRMED' ? 'success' : 'error');
-    loadMyBookings();
-    loadSeatMap();
-    loadShows();
-  } else {
-    showToast(data?.message || 'Booking failed', 'error');
+  const seatNumbers = Array.from(selectedSeats);
+  console.log('🎫 Booking seats:', seatNumbers, 'for show:', currentShowId);
+  
+  try {
+    const { ok, data } = await api('/bookings', {
+      method: 'POST',
+      body: JSON.stringify({ showId: currentShowId, seatNumbers, mode: 'confirm' })
+    });
+    
+    console.log('📋 Booking response:', { ok, data });
+    
+    if (ok && data?.booking?.id) {
+      bookingIdEl.value = data.booking.id;
+      const isSuccess = data.booking.status === 'CONFIRMED';
+      showToast(
+        `🎫 Booking ${data.booking.status}! ${isSuccess ? 'Seats confirmed.' : 'Please try again.'}`, 
+        isSuccess ? 'success' : 'error'
+      );
+      
+      // Refresh data after booking
+      loadMyBookings();
+      loadSeatMap();
+      loadShows();
+      
+      // Clear selected seats if successful
+      if (isSuccess) {
+        selectedSeats.clear();
+      }
+    } else {
+      const errorMessage = data?.error || data?.message || 'Booking failed - please try again';
+      console.error('❌ Booking failed:', errorMessage);
+      showToast(`❌ ${errorMessage}`, 'error');
+    }
+  } catch (error) {
+    console.error('💥 Booking error:', error);
+    showToast('❌ Network error - please check your connection', 'error');
   }
 }
 
@@ -289,11 +337,15 @@ loginForm?.addEventListener('submit', async (e) => {
 loginAdminBtn?.addEventListener('click', () => {
   loginUsernameEl.value = 'admin';
   loginPasswordEl.value = 'admin123';
+  // Auto-submit the form for better UX
+  loginForm?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 });
 
 loginUserBtn?.addEventListener('click', () => {
   loginUsernameEl.value = 'user';
   loginPasswordEl.value = 'user123';
+  // Auto-submit the form for better UX
+  loginForm?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 });
 
 applyFilterBtn?.addEventListener('click', loadShows);
@@ -311,7 +363,12 @@ console.log('Initializing app...');
 setTodaysDate();
 renderWhoAmI();
 updateSectionVisibility();
-loadShows();
+
+// Only load content if user is already logged in
+if (isLoggedIn()) {
+  loadShows();
+  loadMyBookings();
+}
 
 // Reveal on scroll (or immediate reveal as fallback)
 (function initReveal() {
@@ -331,9 +388,5 @@ loadShows();
   }, { threshold: 0.1 });
   elements.forEach((el) => observer.observe(el));
 })();
-
-if (isLoggedIn()) {
-  loadMyBookings();
-}
 
 console.log('🚌 Bus Booking System initialized successfully!');

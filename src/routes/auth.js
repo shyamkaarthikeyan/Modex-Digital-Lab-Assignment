@@ -29,7 +29,9 @@ export function requireAuth(role) {
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     try {
       const payload = jwt.verify(token, JWT_SECRET);
-      if (role && payload.role !== role) return res.status(403).json({ error: 'Forbidden' });
+      if (role && role !== 'any' && payload.role !== role && payload.role !== 'admin') {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
       req.user = payload;
       next();
     } catch (e) {

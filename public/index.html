@@ -22,7 +22,7 @@
     <nav>
       <a href="#shows" id="nav-home">Home</a>
       <a href="#booking" id="nav-booking">My Bookings</a>
-      <a href="#admin" id="nav-admin">Admin</a>
+      <a href="#admin" id="nav-admin" style="display: none;">Admin</a>
       <a href="/docs" target="_blank">API Docs</a>
     </nav>
   </header>
@@ -42,13 +42,20 @@
           <label>Password <input id="login-password" type="password" required /></label>
         </div>
         <button type="submit">Sign In</button>
-        <button type="button" id="login-admin" class="secondary">Use admin</button>
-        <button type="button" id="login-user" class="secondary">Use user</button>
+        <button type="button" id="login-admin" class="secondary">🔑 Quick Admin Login</button>
+        <button type="button" id="login-user" class="secondary">👤 Quick User Login</button>
       </form>
       <div id="whoami" class="whoami"></div>
     </section>
     <section id="shows" class="card reveal">
-      <h2>Available Bus Trips</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2>Available Bus Trips</h2>
+        <div id="logout-container" style="display: none;">
+          <button type="button" onclick="logout()" class="btn" style="background: var(--danger); color: white; padding: 8px 16px; font-size: 14px; font-weight: 500;">
+            🚪 Sign Out
+          </button>
+        </div>
+      </div>
       <div class="controls">
         <label>
           Date filter:

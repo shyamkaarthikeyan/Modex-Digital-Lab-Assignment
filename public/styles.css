@@ -115,12 +115,29 @@ main {
   color: var(--text);
 }
 .whoami { 
-  margin-top: 16px; 
+  margin: 16px 0; 
   padding: 16px;
   background: var(--bg-secondary);
   border-radius: 12px;
   color: var(--text-secondary);
   border: 1px solid var(--border);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+}
+.whoami .btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 200ms ease;
+}
+.whoami .btn:hover {
+  background: var(--danger-hover, #dc2626);
+  transform: translateY(-1px);
 }
 .list { 
   display: grid; 
