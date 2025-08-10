@@ -1,5 +1,4 @@
 # **Modex Digital Lab** - Ticket Booking System
-**Backend Intern Assignment - 48 Hour Challenge**
 
 A production-ready ticket booking system that simulates core functionality of modern ticketing platforms with enterprise-grade concurrency handling and race condition prevention. Built with Node.js, Express.js, and PostgreSQL.
 
@@ -367,4 +366,4 @@ Modex-Digital-Lab-Assignment/
 MIT License - feel free to use this code for learning and reference.
 
 ---
-**Developed by Modex Digital Lab** | **48-Hour Backend Challenge** | **Node.js + PostgreSQL**
+**Developed by Modex Digital Lab** | **Node.js + PostgreSQL**
