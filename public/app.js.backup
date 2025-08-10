@@ -1,0 +1,581 @@
+// Debug: Check if script is loading
+console.log('🚌 Bus Booking System - JavaScript loading...');
+
+const showsCardsEl = document.getElementById('shows-cards');
+const showsLoadingEl = document.getElementById('shows-loading');
+const showsSkeletonsEl = document.getElementById('shows-skeletons');
+const filterDateEl = document.getElementById('filter-date');
+const applyFilterBtn = document.getElementById('apply-filter');
+const clearFilterBtn = document.getElementById('clear-filter');
+const seatGridEl = document.getElementById('seat-grid');
+const seatHeaderEl = document.getElementById('seat-header');
+const seatmapShowIdEl = document.getElementById('seatmap-show-id');
+const loadSeatsBtn = document.getElementById('load-seats');
+const bookSelectedBtn = document.getElementById('book-selected');
+const holdSelectedBtn = document.getElementById('hold-selected');
+const bookingIdEl = document.getElementById('booking-id');
+const checkBookingBtn = document.getElementById('check-booking');
+const confirmBookingBtn = document.getElementById('confirm-booking');
+const bookingOutputEl = document.getElementById('booking-output');
+const bookingLoadingEl = document.getElementById('booking-loading');
+const bookingStatusBadgeEl = document.getElementById('booking-status-badge');
+const pendingTimerEl = document.getElementById('pending-timer');
+const adminOutputEl = document.getElementById('admin-output');
+const adminShowsEl = document.getElementById('admin-shows');
+const myBookingsListEl = document.getElementById('my-bookings-list');
+const loadMyBookingsBtn = document.getElementById('load-my-bookings');
+const toastEl = document.getElementById('toast');
+// Login elements
+const loginForm = document.getElementById('login-form');
+const loginUsernameEl = document.getElementById('login-username');
+const loginPasswordEl = document.getElementById('login-password');
+const loginAdminBtn = document.getElementById('login-admin');
+const loginUserBtn = document.getElementById('login-user');
+const whoamiEl = document.getElementById('whoami');
+const navAdminLink = document.getElementById('nav-admin');
+const navHomeLink = document.getElementById('nav-home');
+const navBookingLink = document.getElementById('nav-booking');
+
+const createShowForm = document.getElementById('create-show-form');
+const showNameEl = document.getElementById('show-name');
+const showStartEl = document.getElementById('show-start');
+const showSeatsEl = document.getElementById('show-seats');
+
+let selectedSeats = new Set();
+let currentShowId = null;
+let pendingPollTimer = null;
+let pendingCountdownTimer = null;
+let showsPollingInterval = null;
+
+function formatTime(iso) {
+  try { return new Date(iso).toLocaleString(); } catch { return iso; }
+}
+
+async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  const token = localStorage.getItem('token');
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(path, {
+    headers,
+    ...options,
+  });
+  const text = await res.text();
+  try { return { ok: res.ok, status: res.status, data: text ? JSON.parse(text) : null }; }
+  catch { return { ok: res.ok, status: res.status, data: text }; }
+}
+// Simple auth helpers
+function setAuth({ token, role, username }) {
+  if (token) localStorage.setItem('token', token);
+  if (role) localStorage.setItem('role', role);
+  if (username) localStorage.setItem('username', username);
+  renderWhoAmI();
+  updateSectionVisibility();
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('role');
+  localStorage.removeItem('username');
+  renderWhoAmI();
+  updateSectionVisibility();
+  // Clear polling when logging out
+  if (showsPollingInterval) {
+    clearInterval(showsPollingInterval);
+    showsPollingInterval = null;
+  }
+  showToast('Logged out successfully', 'success');
+}
+
+function isLoggedIn() {
+  return !!localStorage.getItem('token');
+}
+
+function updateSectionVisibility() {
+  const loggedIn = isLoggedIn();
+  const role = localStorage.getItem('role');
+  const isAdmin = role === 'admin';
+  
+  // Login section - hide when logged in
+  const loginSection = document.getElementById('login');
+  if (loginSection) {
+    loginSection.style.display = loggedIn ? 'none' : 'block';
+  }
+  
+  // Main sections - show when logged in
+  const showsSection = document.getElementById('shows');
+  const seatmapSection = document.getElementById('seatmap');
+  const bookingSection = document.getElementById('booking');
+  
+  if (showsSection) showsSection.style.display = loggedIn ? 'block' : 'none';
+  if (seatmapSection) seatmapSection.style.display = loggedIn ? 'block' : 'none';
+  if (bookingSection) bookingSection.style.display = loggedIn ? 'block' : 'none';
+  
+  // Admin section - show only for admin
+  const adminSection = document.getElementById('admin');
+  if (adminSection) adminSection.style.display = (loggedIn && isAdmin) ? 'block' : 'none';
+  
+  // Navigation links - show only when logged in
+  if (navHomeLink) navHomeLink.style.display = loggedIn ? 'inline' : 'none';
+  if (navBookingLink) navBookingLink.style.display = loggedIn ? 'inline' : 'none';
+  if (navAdminLink) navAdminLink.style.display = (loggedIn && isAdmin) ? 'inline' : 'none';
+}
+
+function renderWhoAmI() {
+  const role = localStorage.getItem('role');
+  const username = localStorage.getItem('username');
+  if (role && username) {
+    whoamiEl.innerHTML = `Signed in as ${username} (${role}) <button type="button" onclick="logout()" class="secondary" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;">Logout</button>`;
+  } else {
+    whoamiEl.textContent = 'Not signed in';
+  }
+}
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (ok) {
+    setAuth(data);
+    showToast('Signed in', 'success');
+    // Load data after successful login
+    loadShows();
+    loadMyBookings(); // Load user's bookings
+    if (data.role === 'admin') {
+      loadAdminShows();
+    }
+    // Start polling for updates (only if not already running)
+    if (!showsPollingInterval) {
+      showsPollingInterval = setInterval(loadShows, 10000);
+    }
+  } else {sPollingInterval = setInterval(loadShows, 10000);
+    }
+  } else {
+    showToast(data?.error || 'Login failed', 'error');
+  }
+});
+loginAdminBtn.addEventListener('click', () => {
+  loginUsernameEl.value = 'admin';
+  loginPasswordEl.value = 'admin123';
+});
+loginUserBtn.addEventListener('click', () => {
+  loginUsernameEl.value = 'user';
+  loginPasswordEl.value = 'user123';
+});
+
+function showToast(message, type = 'error', timeout = 3000) {
+  toastEl.textContent = message;
+  toastEl.className = `toast ${type} show`;
+  // Auto-hide after timeout
+  window.clearTimeout(showToast._t);
+  showToast._t = window.setTimeout(() => {
+    toastEl.classList.remove('show');
+  }, timeout);
+}
+
+async function loadShows() {
+  console.log('Loading shows...');
+  showsLoadingEl.classList.remove('hidden');
+  if (showsSkeletonsEl) showsSkeletonsEl.classList.remove('hidden');
+  
+  try {
+    const dateQuery = filterDateEl.value ? `?date=${filterDateEl.value}` : '';
+    const { ok, data } = await api(`/shows${dateQuery}`);
+    console.log('Shows API response:', { ok, data });
+    
+    showsLoadingEl.classList.add('hidden');
+    if (showsSkeletonsEl) showsSkeletonsEl.classList.add('hidden');
+    
+    if (!ok) {
+      console.error('Failed to load buses:', data);
+      showsCardsEl.innerHTML = '<div class="no-data">Failed to load buses. Please try again.</div>';
+      return;
+    }
+    
+    showsCardsEl.innerHTML = '';
+    
+    if (!data.shows || data.shows.length === 0) {
+      showsCardsEl.innerHTML = '<div class="no-data">No buses available for the selected date.</div>';
+      return;
+    }
+    
+    let visibleShows = 0;
+    data.shows.forEach((s) => {
+      // For testing: show all shows regardless of date
+      console.log('Show:', s.name, 'Date:', s.start_time);
+      
+      visibleShows++;
+      const card = document.createElement('div');
+      card.className = 'card-trip';
+      const available = s.available_seats ?? 0;
+      const total = s.total_seats ?? 0;
+      const booked = s.booked_seats ?? (total - available);
+      const pctBooked = total ? Math.round((booked / total) * 100) : 0;
+      card.classList.add('reveal');
+      card.innerHTML = `
+        <div class="trip-title">${s.name}</div>
+        <div class="trip-meta">
+          <div class="row">🕒 ${formatTime(s.start_time)}</div>
+          <div class="row">💺 Available: ${available} <span class="badge">${total} seats</span></div>
+        </div>
+        <div class="progress"><div class="bar" style="width:0%"></div></div>
+        <div class="trip-actions">
+          <span class="hint">${pctBooked}% booked</span>
+          <button>Book Now</button>
+        </div>
+      `;
+      const btn = card.querySelector('button');
+      btn.onclick = () => { seatmapShowIdEl.value = s.id; loadSeatMap(); window.location.hash = '#seatmap'; };
+      showsCardsEl.appendChild(card);
+      // Animate progress fill after insertion
+      const bar = card.querySelector('.bar');
+      requestAnimationFrame(() => { bar.style.width = `${pctBooked}%`; });
+    });
+    
+    if (visibleShows === 0) {
+      showsCardsEl.innerHTML = '<div class="no-data">No buses available for the selected date.</div>';
+    }
+    
+    console.log(`Loaded ${visibleShows} buses`);
+    revealInView();
+  } catch (error) {
+    console.error('Error loading buses:', error);
+    showsLoadingEl.classList.add('hidden');
+    if (showsSkeletonsEl) showsSkeletonsEl.classList.add('hidden');
+    showsCardsEl.innerHTML = '<div class="no-data">Error loading buses. Please refresh the page.</div>';
+  }
+}
+
+function renderSeatGrid(seats) {
+  seatGridEl.innerHTML = '';
+  selectedSeats.clear();
+  updateBookButtons();
+  seats.forEach((seat) => {
+    const btn = document.createElement('div');
+    btn.className = `seat ${seat.status}`;
+    btn.textContent = seat.seat_number;
+    btn.dataset.seatNumber = seat.seat_number;
+    if (seat.status === 'available') {
+      btn.onclick = () => {
+        const num = Number(btn.dataset.seatNumber);
+        if (selectedSeats.has(num)) {
+          selectedSeats.delete(num);
+          btn.classList.remove('selected');
+        } else {
+          selectedSeats.add(num);
+          btn.classList.add('selected');
+        }
+        updateBookButtons();
+      };
+    }
+    seatGridEl.appendChild(btn);
+  });
+}
+
+async function loadSeatMap() {
+  const id = Number(seatmapShowIdEl.value);
+  if (!Number.isInteger(id)) return;
+  currentShowId = id;
+  const { ok, data } = await api(`/shows/${id}/seats`);
+  if (!ok) return;
+  const counts = data.counts || { available: 0, booked: 0, held: 0 };
+  seatHeaderEl.textContent = `${data.show.name} — Total ${data.show.total_seats} | Available ${counts.available} | Booked ${counts.booked} | Held ${counts.held}`;
+  renderSeatGrid(data.seats);
+  renderSummary(data.show, []);
+}
+
+async function bookSelected(mode = 'confirm') {
+  if (!currentShowId || selectedSeats.size === 0) return;
+  const seatNumbers = Array.from(selectedSeats);
+  const { ok, status, data } = await api('/bookings', {
+  bookingOutputEl.textContent = JSON.stringify(data, null, 2);
+  if (ok && data?.booking?.id) {
+    bookingIdEl.value = data.booking.id;
+    showToast(`Booking ${data.booking.status}`, data.booking.status === 'CONFIRMED' ? 'success' : 'error');
+    if (data.booking.status === 'PENDING') {
+      startPollingBooking(data.booking.id);
+      if (data.expiresAt) startPendingCountdown(new Date(data.expiresAt).getTime());
+    }
+    // Refresh bookings list after successful booking
+    loadMyBookings();
+  } else {
+    showToast(data?.message || 'Booking failed', 'error');
+  }
+  await loadSeatMap();
+  await loadShows();
+}
+
+async function checkBooking() {
+
+async function checkBooking() {
+  const id = Number(bookingIdEl.value);
+  if (!Number.isInteger(id)) return;
+  bookingLoadingEl.classList.remove('hidden');
+  const { data } = await api(`/bookings/${id}`);
+  bookingLoadingEl.classList.add('hidden');
+  bookingOutputEl.textContent = JSON.stringify(data, null, 2);
+  if (data?.booking) {
+    setStatusBadge(data.booking.status);
+    if (data.booking.status === 'PENDING' && data.expiresAt) {
+      startPendingCountdown(new Date(data.expiresAt).getTime());
+    } else {
+      clearPendingCountdown();
+    }
+  }
+}
+
+  const { data } = await api(`/bookings/${id}/confirm`, { method: 'POST' });
+  bookingOutputEl.textContent = JSON.stringify(data, null, 2);
+  if (data?.booking?.status === 'CONFIRMED') {
+    showToast('Booking confirmed', 'success');
+    loadMyBookings(); // Refresh bookings list
+  }
+  else if (data?.error) showToast(data.error, 'error');
+  if (data?.booking) setStatusBadge(data.booking.status);
+  clearPendingCountdown();
+  await loadSeatMap();
+  await loadShows(); setStatusBadge(data.booking.status);
+  clearPendingCountdown();
+  await loadSeatMap();
+  await loadShows();
+}
+
+function updateBookButtons() {
+  const disabled = selectedSeats.size === 0;
+  bookSelectedBtn.disabled = disabled;
+  holdSelectedBtn.disabled = disabled;
+  renderSummary(null, Array.from(selectedSeats));
+}
+function renderSummary(show, seats) {
+  const tripEl = document.getElementById('summary-trip');
+  const seatsEl = document.getElementById('summary-seats');
+  const totalEl = document.getElementById('summary-total');
+  if (show) tripEl.textContent = `${show.name} — ${formatTime(show.start_time)}`;
+  seatsEl.textContent = seats.length ? `Seats: ${seats.join(', ')}` : 'Seats: —';
+  const price = seats.length * 100; // placeholder price
+  totalEl.textContent = `Total: ₹${price}`;
+}
+
+async function startPollingBooking(id) {
+  // Clear any existing poller
+  if (pendingPollTimer) clearInterval(pendingPollTimer);
+  let attempts = 0;
+  pendingPollTimer = setInterval(async () => {
+    attempts += 1;
+    const { ok, data } = await api(`/bookings/${id}`);
+    if (!ok || !data?.booking) return;
+    bookingOutputEl.textContent = JSON.stringify(data, null, 2);
+    setStatusBadge(data.booking.status);
+    if (data.booking.status === 'PENDING' && data.expiresAt) {
+      startPendingCountdown(new Date(data.expiresAt).getTime());
+    }
+    if (data.booking.status !== 'PENDING' || attempts > 50) {
+      clearInterval(pendingPollTimer);
+      pendingPollTimer = null;
+      if (data.booking.status === 'CONFIRMED') {
+        showToast('Booking confirmed', 'success');
+        loadMyBookings(); // Refresh bookings list
+      }
+      if (data.booking.status === 'FAILED') showToast('Booking failed', 'error');
+      clearPendingCountdown();
+      await loadSeatMap();
+      await loadShows();
+    }
+  }, 3000);
+}
+
+function setStatusBadge(status) {
+  bookingStatusBadgeEl.textContent = status;
+  bookingStatusBadgeEl.classList.remove('pending', 'confirmed', 'failed');
+  const key = (status || '').toLowerCase();
+  if (key === 'pending') bookingStatusBadgeEl.classList.add('pending');
+  if (key === 'confirmed') bookingStatusBadgeEl.classList.add('confirmed');
+  if (key === 'failed') bookingStatusBadgeEl.classList.add('failed');
+  // flash micro-interaction
+  bookingStatusBadgeEl.classList.remove('flash');
+  void bookingStatusBadgeEl.offsetWidth; // reflow to restart animation
+  bookingStatusBadgeEl.classList.add('flash');
+}
+
+function startPendingCountdown(expiresAtMs) {
+  clearPendingCountdown();
+  function tick() {
+    const remaining = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    pendingTimerEl.textContent = `Expires in ${m}:${String(s).padStart(2, '0')}`;
+    pendingTimerEl.classList.remove('hidden');
+    if (remaining <= 0) {
+      clearPendingCountdown();
+    }
+  }
+  tick();
+  pendingCountdownTimer = setInterval(tick, 1000);
+}
+
+function clearPendingCountdown() {
+  if (pendingCountdownTimer) clearInterval(pendingCountdownTimer);
+  pendingCountdownTimer = null;
+  pendingTimerEl.classList.add('hidden');
+}
+
+createShowForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const payload = {
+    name: showNameEl.value.trim(),
+    startTime: new Date(showStartEl.value).toISOString(),
+    totalSeats: Number(showSeatsEl.value),
+  };
+  const { ok, data } = await api('/admin/shows', { method: 'POST', body: JSON.stringify(payload) });
+  adminOutputEl.textContent = JSON.stringify(data, null, 2);
+  if (ok) {
+    showToast('Bus trip created successfully', 'success');
+    createShowForm.reset();
+  } else {
+    showToast('Failed to create bus trip', 'error');
+  }
+  await loadShows();
+  await loadAdminShows();
+});
+
+loadSeatsBtn.addEventListener('click', loadSeatMap);
+bookSelectedBtn.addEventListener('click', () => bookSelected('confirm'));
+holdSelectedBtn.addEventListener('click', () => bookSelected('hold'));
+checkBookingBtn.addEventListener('click', checkBooking);
+confirmBookingBtn.addEventListener('click', confirmHeld);
+
+// Initialize
+// Clear any existing login data to start fresh
+localStorage.clear();
+// Check login status and set initial visibility
+updateSectionVisibility();
+renderWhoAmI();
+
+// Reveal-on-scroll for key sections
+function revealInView() {
+  const elements = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  elements.forEach((el) => observer.observe(el));
+}
+
+revealInView();
+
+// Make logout function global so it can be called from HTML
+window.logout = logout;
+
+// Set today's date as default filter
+function setTodaysDate() {
+  const today = new Date();
+  const formattedDate = today.toISOString().split('T')[0];
+  filterDateEl.value = formattedDate;
+}
+
+// Initialize with today's date and load buses
+setTodaysDate();
+// Only load admin data and start polling if user is logged in
+if (isLoggedIn()) {
+  loadAdminShows();
+  loadMyBookings(); // Load user's bookings
+  // Poll for show availability every 10s for simple real-time updates
+  showsPollingInterval = setInterval(loadShows, 10000);
+}
+
+applyFilterBtn.addEventListener('click', loadShows);
+clearFilterBtn.addEventListener('click', () => { filterDateEl.value = ''; loadShows(); });
+loadMyBookingsBtn.addEventListener('click', loadMyBookings);
+applyFilterBtn.addEventListener('click', loadShows);
+clearFilterBtn.addEventListener('click', () => { filterDateEl.value = ''; loadShows(); });
+
+async function loadAdminShows() {
+  // reuse /shows for counts; show delete action
+  const { ok, data } = await api('/shows');
+  if (!ok) return;
+  adminShowsEl.innerHTML = '';
+  const header = document.createElement('div');
+  header.className = 'row header';
+  header.innerHTML = `<div>Bus Trip Name</div><div>Departure Time</div><div>Total</div><div>Avail / Booked / Held</div><div>Action</div>`;
+  adminShowsEl.appendChild(header);
+  data.shows.forEach((s) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <div><strong>${s.name}</strong></div>
+      <div>${formatTime(s.start_time)}</div>
+      <div>${s.total_seats}</div>
+      <div>${s.available_seats ?? 0} / ${s.booked_seats ?? 0} / ${s.held_seats ?? 0}</div>
+      <div><button class="danger">Delete</button></div>
+    `;
+    const btn = row.querySelector('button');
+    btn.onclick = async () => {
+      if (!confirm('Delete this bus trip?')) return;
+      const resp = await api(`/admin/shows/${s.id}`, { method: 'DELETE' });
+      if (resp.ok) {
+        showToast('Bus trip deleted', 'success');
+        await loadShows();
+        await loadAdminShows();
+      } else {
+        showToast('Failed to delete bus trip', 'error');
+      }
+    };
+    adminShowsEl.appendChild(row);
+  });
+async function loadMyBookings() {
+  if (!isLoggedIn()) {
+    myBookingsListEl.innerHTML = '<div class="no-data">Please log in to view your bookings.</div>';
+    return;
+  }
+  
+  try {
+    const { ok, data } = await api('/bookings');
+    
+    if (!ok) {
+      myBookingsListEl.innerHTML = '<div class="no-data">Failed to load bookings. Please try again.</div>';
+      return;
+    }
+    
+    if (!data.bookings || data.bookings.length === 0) {
+      myBookingsListEl.innerHTML = '<div class="no-data">You have no bookings yet.</div>';
+      return;
+    }
+    
+    myBookingsListEl.innerHTML = '';
+    
+    data.bookings.forEach(booking => {
+      const bookingItem = document.createElement('div');
+      bookingItem.className = 'booking-item';
+      
+      const statusClass = booking.status.toLowerCase();
+      const seatText = booking.seat_count === 1 ? 'seat' : 'seats';
+      
+      bookingItem.innerHTML = `
+        <div class="booking-header">
+          <div class="booking-id">Booking #${booking.id}</div>
+          <div class="booking-status ${statusClass}">${booking.status}</div>
+        </div>
+        <div class="booking-details">
+          <div class="booking-trip">${booking.show_name}</div>
+          <div>📅 ${formatTime(booking.start_time)}</div>
+          <div>🕒 Booked: ${formatTime(booking.created_at)}</div>
+          ${booking.seat_numbers ? `<div class="booking-seats">${booking.seat_count} ${seatText}: ${booking.seat_numbers}</div>` : ''}
+        </div>
+      `;
+      
+      myBookingsListEl.appendChild(bookingItem);
+    });
+    
+  } catch (error) {
+    console.error('Error loading bookings:', error);
+    myBookingsListEl.innerHTML = '<div class="no-data">Error loading bookings. Please refresh the page.</div>';
+  }
+}
+
+// Only load admin shows if user is logged in and is admin
+
+// Only load admin shows if user is logged in and is admin
+if (isLoggedIn() && localStorage.getItem('role') === 'admin') {
+  loadAdminShows();
+}

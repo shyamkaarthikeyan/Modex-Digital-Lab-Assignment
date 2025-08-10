@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modex Digital Lab - Ticket Booking</title>
+  <link rel="stylesheet" href="/styles.css?v=20250810140000" />
+  <style>
+    /* Fallback styles in case CSS doesn't load */
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .card { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    .hidden { display: none; }
+    .loading { text-align: center; padding: 20px; }
+  </style>
+</head>
+<body>
+  <header class="reveal">
+    <h1>Modex Digital Lab</h1>
+    <p class="subtitle">Bus Ticket Booking System</p>
+    <nav>
+      <a href="#shows" id="nav-home">Home</a>
+      <a href="#booking" id="nav-booking">My Bookings</a>
+      <a href="#admin" id="nav-admin">Admin</a>
+      <a href="/docs" target="_blank">API Docs</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero reveal">
+      <h2>Book your bus trip</h2>
+      <p>Browse bus trips available for today and the next 4 days and book your seats instantly.</p>
+    </section>
+    <section id="login" class="card reveal">
+      <h2>Login</h2>
+      <form id="login-form">
+        <div class="form-row">
+          <label>Username <input id="login-username" required placeholder="admin (admin123) or user (user123)" /></label>
+        </div>
+        <div class="form-row">
+          <label>Password <input id="login-password" type="password" required /></label>
+        </div>
+        <button type="submit">Sign In</button>
+        <button type="button" id="login-admin" class="secondary">Use admin</button>
+        <button type="button" id="login-user" class="secondary">Use user</button>
+      </form>
+      <div id="whoami" class="whoami"></div>
+    </section>
+    <section id="shows" class="card reveal">
+      <h2>Available Bus Trips</h2>
+      <div class="controls">
+        <label>
+          Date filter:
+          <input type="date" id="filter-date" />
+        </label>
+        <button id="apply-filter">Apply</button>
+        <button id="clear-filter" class="secondary">Clear</button>
+        <span class="hint">Buses available for the next 5 days</span>
+      </div>
+      <div id="shows-loading" class="loading hidden">Loading trips...</div>
+      <div id="shows-skeletons" class="cards hidden">
+        <div class="skeleton card"></div>
+        <div class="skeleton card"></div>
+        <div class="skeleton card"></div>
+      </div>
+      <div id="shows-cards" class="cards"></div>
+    </section>
+
+    <section id="seatmap" class="card reveal">
+      <h2>Seat Selection</h2>
+      <div class="controls">
+        <label>
+          Show ID:
+          <input type="number" id="seatmap-show-id" min="1" />
+        </label>
+        <button id="load-seats">Load Seats</button>
+      </div>
+      <div id="seat-header" class="seat-header"></div>
+      <div class="seat-layout">
+        <div class="seat-grid-wrap">
+          <div id="seat-grid" class="grid"></div>
+          <div class="legend">
+            <span class="legend-item"><span class="dot available"></span> Available</span>
+            <span class="legend-item"><span class="dot booked"></span> Booked</span>
+            <span class="legend-item"><span class="dot selected"></span> Selected</span>
+          </div>
+        </div>
+        <aside class="summary" id="summary">
+          <h3>Booking Summary</h3>
+          <div id="summary-trip"></div>
+          <div id="summary-seats"></div>
+          <div id="summary-total" class="total"></div>
+          <div class="actions">
+            <button id="book-selected">Confirm Booking</button>
+            <button id="hold-selected" class="secondary">Hold 2 min</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="booking" class="card reveal">
+      <h2>My Bookings</h2>
+      <div class="controls">
+        <button id="load-my-bookings">Refresh My Bookings</button>
+        <div style="margin-top: 16px;">
+          <strong>Check Specific Booking:</strong>
+          <label style="margin-left: 10px;">
+            Booking ID:
+            <input type="number" id="booking-id" min="1" style="width: 100px;" />
+          </label>
+          <button id="check-booking">Check Status</button>
+          <button id="confirm-booking">Confirm Held</button>
+        </div>
+      </div>
+      <div id="my-bookings-list" class="bookings-list"></div>
+      <div class="status-wrap">
+        <div id="booking-status-badge" class="status-badge">—</div>
+        <div id="pending-timer" class="pending-timer hidden"></div>
+      </div>
+      <div id="booking-loading" class="loading hidden">Loading...</div>
+      <pre id="booking-output" class="output"></pre>
+    </section>
+
+    <section id="admin" class="card reveal">
+      <h2>Admin: Create Bus Trip</h2>
+      <form id="create-show-form">
+        <div class="form-row">
+          <label>Trip Name <input type="text" id="show-name" required placeholder="e.g., Morning Bus - Route A" /></label>
+        </div>
+        <div class="form-row">
+          <label>Departure Time <input type="datetime-local" id="show-start" required /></label>
+        </div>
+        <div class="form-row">
+          <label>Total Seats <input type="number" id="show-seats" min="1" value="40" required /></label>
+        </div>
+        <button type="submit">Create Bus Trip</button>
+      </form>
+      <pre id="admin-output" class="output"></pre>
+      <h3>All Bus Trips</h3>
+      <div id="admin-shows" class="list table"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Built with Node.js, Express, and Postgres</span>
+  </footer>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js?v=20250810150000" type="module"></script>
+</body>
+</html>

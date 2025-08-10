@@ -1,0 +1,140 @@
+openapi: 3.0.3
+info:
+  title: Ticket Booking System API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /auth/login:
+    post:
+      summary: Login (demo users)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, example: admin }
+                password: { type: string, example: admin123 }
+      responses:
+        '200': { description: OK }
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /admin/shows:
+    post:
+      summary: Create a show and its seats
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, startTime, totalSeats]
+              properties:
+                name: { type: string, example: Bus A }
+                startTime: { type: string, format: date-time }
+                totalSeats: { type: integer, example: 40 }
+      responses:
+        '201':
+          description: Created
+        '400': { description: Bad request }
+    get:
+      summary: List shows (admin)
+      responses:
+        '200': { description: OK }
+  /admin/shows/{id}:
+    delete:
+      summary: Delete a show
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+  /shows:
+    get:
+      summary: List shows with available/held/booked seat counts
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+          description: Filter shows by start date (YYYY-MM-DD)
+      responses:
+        '200':
+          description: OK
+  /shows/{id}/seats:
+    get:
+      summary: Seat map for a show
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+  /bookings:
+    post:
+      summary: Create a booking (confirm immediately or hold for 2 minutes)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [showId, seatNumbers]
+              properties:
+                showId: { type: integer }
+                seatNumbers:
+                  type: array
+                  items: { type: integer }
+                mode:
+                  type: string
+                  enum: [confirm, hold]
+                  default: confirm
+      responses:
+        '201': { description: Created }
+        '400': { description: Bad request }
+        '409': { description: Conflict (seats unavailable) }
+  /bookings/{id}:
+    get:
+      summary: Get booking status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+  /bookings/{id}/confirm:
+    post:
+      summary: Confirm a held booking
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+        '400': { description: Invalid state }
+        '404': { description: Not found }
+        '409': { description: Hold expired }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,0 +1,31 @@
+{
+  "name": "modex-digital-lab-ticket-booking",
+  "version": "1.0.0",
+  "description": "Modex Digital Lab - Ticket booking system with concurrency-safe seat booking using Postgres",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "start:ttl5": "HOLD_TTL_MS=5000 node src/index.js",
+    "migrate": "node scripts/migrate.js",
+    "populate": "node scripts/populate_buses.js",
+    "cleanup:tests": "node scripts/cleanup_test_shows.js",
+    "test:concurrency": "node scripts/concurrency_test.js",
+    "test:concurrency:race": "BASE=http://localhost:3000 node scripts/concurrency_test.js",
+    "test:expiry": "node scripts/expiry_test.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.12.0",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "nodemon": "^3.1.10"
+  }
+}
