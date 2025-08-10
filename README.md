@@ -2,6 +2,9 @@
 
 A modern ticket booking system developed by **Modex Digital Lab** that simulates core functionality of RedBus/BookMyShow with concurrency-safe seat booking. Supports creating shows, listing shows/seats, booking seats (immediate confirm) and optional holding with 2-minute expiry.
 
+## 🔗 Repository
+**GitHub**: [https://github.com/shyamkaarthikeyan/Modex-Digital-Lab-Assignment](https://github.com/shyamkaarthikeyan/Modex-Digital-Lab-Assignment)
+
 ## Stack
 - Node.js, Express.js
 - Postgres (with transactional, atomic seat updates)
